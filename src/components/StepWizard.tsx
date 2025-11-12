@@ -143,9 +143,6 @@ export default function StepWizard({
                   )}>
                     {step.title}
                   </h3>
-                  <p className="text-xs text-secondary-700 dark:text-gray-500 mt-1 max-w-32">
-                    {step.description}
-                  </p>
                 </div>
 
                 {/* Connector Line */}
@@ -218,9 +215,6 @@ export default function StepWizard({
                     )}>
                       Step {step.id}: {step.title}
                     </h3>
-                    <p className="text-sm text-secondary-700 dark:text-gray-400 mt-1">
-                      {step.description}
-                    </p>
                   </div>
 
                   {/* Status Indicator */}

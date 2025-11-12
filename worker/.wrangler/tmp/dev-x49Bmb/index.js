@@ -21083,37 +21083,147 @@ async function addCoverPage(pdf, projectData, selectedDocumentNames, allAvailabl
     color: darkGray
   });
   currentY -= 20;
+  const addHeaderToPage = /* @__PURE__ */ __name(async (newPage) => {
+    const { width: pgWidth, height: pgHeight } = newPage.getSize();
+    newPage.drawRectangle({
+      x: 0,
+      y: pgHeight - 80,
+      width: pgWidth,
+      height: 80,
+      color: headerDark
+    });
+    try {
+      const logoUrl = "https://raw.githubusercontent.com/karthikeyanasha24/pdf-packet-6/main/public/image-white.png";
+      const logoResponse = await fetch(logoUrl);
+      if (logoResponse.ok) {
+        const logoBytes = await logoResponse.arrayBuffer();
+        const logoImage = await pdf.embedPng(logoBytes);
+        const logoWidth = 100;
+        const logoHeight = 15;
+        newPage.drawImage(logoImage, {
+          x: 50,
+          y: pgHeight - 45 - logoHeight / 2 + 5,
+          width: logoWidth,
+          height: logoHeight
+        });
+      }
+    } catch (error2) {
+      console.warn("Failed to load logo on continuation page");
+    }
+    const sectionText2 = "SECTION 06 16 26";
+    newPage.drawText(sectionText2, {
+      x: pgWidth - 145,
+      y: pgHeight - 45,
+      size: 10,
+      font: boldFont,
+      color: rgb(1, 1, 1)
+    });
+    newPage.drawText("Submittal Form (continued)", {
+      x: 55,
+      y: pgHeight - 110,
+      size: 14,
+      font: boldFont,
+      color: titleColor
+    });
+  }, "addHeaderToPage");
+  const minYForContent = 100;
+  let currentPage = page;
+  const checkboxLineSpacing = 14;
   if (allAvailableDocuments && allAvailableDocuments.length > 0) {
-    allAvailableDocuments.forEach((docName) => {
+    for (let i = 0; i < allAvailableDocuments.length; i++) {
+      const docName = allAvailableDocuments[i];
+      if (currentY < minYForContent) {
+        currentPage = pdf.addPage(PageSizes.Letter);
+        await addHeaderToPage(currentPage);
+        currentY = height - 140;
+      }
       const isSelected = selectedDocumentNames?.includes(docName) || false;
-      drawCheckbox(docName, isSelected, labelX, currentY);
-      currentY -= 16;
-    });
+      const checkboxY = currentY;
+      currentPage.drawRectangle({
+        x: labelX,
+        y: checkboxY,
+        width: checkboxSize,
+        height: checkboxSize,
+        color: rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 0.5
+      });
+      if (isSelected) {
+        currentPage.drawText("X", {
+          x: labelX + 3,
+          y: checkboxY + 2,
+          size: 9,
+          font: boldFont,
+          color: nexgenBlue
+        });
+      }
+      currentPage.drawText(docName, {
+        x: labelX + checkboxSize + 5,
+        y: checkboxY + 2,
+        size: 10,
+        font,
+        color: rgb(0, 0, 0)
+      });
+      currentY -= checkboxLineSpacing;
+    }
   } else if (selectedDocumentNames && selectedDocumentNames.length > 0) {
-    selectedDocumentNames.forEach((docName) => {
-      drawCheckbox(docName, true, labelX, currentY);
-      currentY -= 16;
-    });
+    for (let i = 0; i < selectedDocumentNames.length; i++) {
+      const docName = selectedDocumentNames[i];
+      if (currentY < minYForContent) {
+        currentPage = pdf.addPage(PageSizes.Letter);
+        await addHeaderToPage(currentPage);
+        currentY = height - 140;
+      }
+      const checkboxY = currentY;
+      currentPage.drawRectangle({
+        x: labelX,
+        y: checkboxY,
+        width: checkboxSize,
+        height: checkboxSize,
+        color: rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 0.5
+      });
+      currentPage.drawText("X", {
+        x: labelX + 3,
+        y: checkboxY + 2,
+        size: 9,
+        font: boldFont,
+        color: nexgenBlue
+      });
+      currentPage.drawText(docName, {
+        x: labelX + checkboxSize + 5,
+        y: checkboxY + 2,
+        size: 10,
+        font,
+        color: rgb(0, 0, 0)
+      });
+      currentY -= checkboxLineSpacing;
+    }
   } else {
-    page.drawText("No documents available", {
+    currentPage.drawText("No documents available", {
       x: labelX,
-      // Changed from valueX to labelX
       y: currentY,
       size: 9,
       font,
       color: rgb(0.5, 0.5, 0.5)
     });
-    currentY -= 16;
+    currentY -= checkboxLineSpacing;
   }
   currentY -= 10;
-  page.drawText("Product:", {
+  if (currentY < minYForContent + 100) {
+    currentPage = pdf.addPage(PageSizes.Letter);
+    await addHeaderToPage(currentPage);
+    currentY = height - 140;
+  }
+  currentPage.drawText("Product:", {
     x: labelX,
     y: currentY,
     size: 10,
     font: boldFont,
     color: darkGray
   });
-  page.drawText(projectData.product, {
+  currentPage.drawText(projectData.product, {
     x: valueX,
     y: currentY,
     size: 10,
@@ -21121,28 +21231,28 @@ async function addCoverPage(pdf, projectData, selectedDocumentNames, allAvailabl
     color: darkGray
   });
   const footerY = 120;
-  page.drawText("NEXGEN\xAE Building Products, LLC", {
+  currentPage.drawText("NEXGEN\xAE Building Products, LLC", {
     x: labelX,
     y: footerY,
     size: 9,
     font: boldFont,
     color: darkGray
   });
-  page.drawText("1504 Manhattan Ave West, #300 Brandon, FL 34205", {
+  currentPage.drawText("1504 Manhattan Ave West, #300 Brandon, FL 34205", {
     x: labelX,
     y: footerY - 12,
     size: 8,
     font,
     color: mediumGray
   });
-  page.drawText("(727) 634-5534", {
+  currentPage.drawText("(727) 634-5534", {
     x: labelX,
     y: footerY - 24,
     size: 8,
     font,
     color: mediumGray
   });
-  page.drawText("Technical Support: support@nexgenbp.com", {
+  currentPage.drawText("Technical Support: support@nexgenbp.com", {
     x: labelX,
     y: footerY - 36,
     size: 8,
@@ -21151,7 +21261,7 @@ async function addCoverPage(pdf, projectData, selectedDocumentNames, allAvailabl
   });
   const versionText = "Version 1.0 October 2025 \xA9 2025 NEXGEN Building Products";
   const versionWidth = font.widthOfTextAtSize(versionText, 7);
-  page.drawText(versionText, {
+  currentPage.drawText(versionText, {
     x: width - versionWidth - 50,
     y: 50,
     size: 7,

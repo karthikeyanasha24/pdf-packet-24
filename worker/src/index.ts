@@ -480,15 +480,15 @@ async function addCoverPage(pdf: PDFDocument, projectData: ProjectData, selected
   const isStructuralFloor = projectData.productType === 'structural-floor';
   
   if (isStructuralFloor) {
-    page.drawText('MAXTERRA® MgO Non-Combustible Structural', {
+  page.drawText('MAXTERRA® MgO Non-Combustible Structural', {
       x: 55,
       y: height - 147,
       size: 18,
       font: font, // Regular font (less bold)
       color: titleColor,
       lineHeight: 18, // 100% line height
-    });
-    page.drawText('Floor Panels Submittal Form', {
+  });
+  page.drawText('Floor Panels Submittal Form', {
       x: 55,
       y: height - 167,
       size: 18,
@@ -642,43 +642,185 @@ async function addCoverPage(pdf: PDFDocument, projectData: ProjectData, selected
   });
   currentY -= 20;
 
+  // Helper function to add header to new page
+  const addHeaderToPage = async (newPage: PDFPage) => {
+    const { width: pgWidth, height: pgHeight } = newPage.getSize();
+    
+    // Dark header bar at the top
+    newPage.drawRectangle({
+      x: 0,
+      y: pgHeight - 80,
+      width: pgWidth,
+      height: 80,
+      color: headerDark,
+    });
+
+    // NEXGEN Logo
+    try {
+      const logoUrl = 'https://raw.githubusercontent.com/karthikeyanasha24/pdf-packet-6/main/public/image-white.png';
+      const logoResponse = await fetch(logoUrl);
+      if (logoResponse.ok) {
+        const logoBytes = await logoResponse.arrayBuffer();
+        const logoImage = await pdf.embedPng(logoBytes);
+        const logoWidth = 100;
+        const logoHeight = 15;
+        
+        newPage.drawImage(logoImage, {
+          x: 50,
+          y: pgHeight - 45 - (logoHeight / 2) + 5,
+          width: logoWidth,
+          height: logoHeight,
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load logo on continuation page');
+    }
+
+    // Section identifier
+    const sectionText = 'SECTION 06 16 26';
+    newPage.drawText(sectionText, {
+      x: pgWidth - 145,
+      y: pgHeight - 45,
+      size: 10,
+      font: boldFont,
+      color: rgb(1, 1, 1),
+    });
+
+    // Continuation title
+    newPage.drawText('Submittal Form (continued)', {
+      x: 55,
+      y: pgHeight - 110,
+      size: 14,
+      font: boldFont,
+      color: titleColor,
+    });
+  };
+
   // Draw ALL available documents from the category - aligned with "Submittal Type" label
+  // Add dynamic page breaks when running out of space
+  const minYForContent = 100; // Reduced from 150 to 100 - allow content closer to footer
+  let currentPage = page;
+  const checkboxLineSpacing = 14; // Reduced from 16 to 14 for tighter spacing
+
   if (allAvailableDocuments && allAvailableDocuments.length > 0) {
-    allAvailableDocuments.forEach((docName) => {
+    for (let i = 0; i < allAvailableDocuments.length; i++) {
+      const docName = allAvailableDocuments[i];
+      
+      // Check if we need a new page
+      if (currentY < minYForContent) {
+        // Add new page
+        currentPage = pdf.addPage(PageSizes.Letter);
+        await addHeaderToPage(currentPage);
+        currentY = height - 140; // Reset Y position for new page
+      }
+
       // Check if this document is selected
       const isSelected = selectedDocumentNames?.includes(docName) || false;
-      drawCheckbox(docName, isSelected, labelX, currentY); // Changed from valueX to labelX
-    currentY -= 16;
-  });
+      
+      // Draw checkbox on current page
+      const checkboxY = currentY;
+      currentPage.drawRectangle({
+        x: labelX,
+        y: checkboxY,
+        width: checkboxSize,
+        height: checkboxSize,
+        color: rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 0.5,
+      });
+
+      if (isSelected) {
+        currentPage.drawText('X', {
+          x: labelX + 3,
+          y: checkboxY + 2,
+          size: 9,
+          font: boldFont,
+          color: nexgenBlue,
+        });
+      }
+
+      currentPage.drawText(docName, {
+        x: labelX + checkboxSize + 5,
+        y: checkboxY + 2,
+        size: 10,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+
+      currentY -= checkboxLineSpacing; // Use tighter spacing
+    }
   } else if (selectedDocumentNames && selectedDocumentNames.length > 0) {
     // Fallback: if allAvailableDocuments not provided, show selected ones
-    selectedDocumentNames.forEach((docName) => {
-      drawCheckbox(docName, true, labelX, currentY); // Changed from valueX to labelX
-      currentY -= 16;
-    });
+    for (let i = 0; i < selectedDocumentNames.length; i++) {
+      const docName = selectedDocumentNames[i];
+      
+      // Check if we need a new page
+      if (currentY < minYForContent) {
+        currentPage = pdf.addPage(PageSizes.Letter);
+        await addHeaderToPage(currentPage);
+        currentY = height - 140;
+      }
+
+      // Draw checkbox on current page
+      const checkboxY = currentY;
+      currentPage.drawRectangle({
+        x: labelX,
+        y: checkboxY,
+        width: checkboxSize,
+        height: checkboxSize,
+        color: rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 0.5,
+      });
+
+      currentPage.drawText('X', {
+        x: labelX + 3,
+        y: checkboxY + 2,
+        size: 9,
+        font: boldFont,
+        color: nexgenBlue,
+      });
+
+      currentPage.drawText(docName, {
+        x: labelX + checkboxSize + 5,
+        y: checkboxY + 2,
+        size: 10,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+
+      currentY -= checkboxLineSpacing; // Use tighter spacing
+    }
   } else {
     // No documents at all
-    page.drawText('No documents available', {
-      x: labelX, // Changed from valueX to labelX
+    currentPage.drawText('No documents available', {
+      x: labelX,
       y: currentY,
       size: 9,
       font: font,
       color: rgb(0.5, 0.5, 0.5),
     });
-    currentY -= 16;
+    currentY -= checkboxLineSpacing;
   }
 
   currentY -= 10;
 
+  // Check if we have space for Product section and footer
+  if (currentY < minYForContent + 100) {
+    currentPage = pdf.addPage(PageSizes.Letter);
+    await addHeaderToPage(currentPage);
+    currentY = height - 140;
+  }
+
   // Product section
-  page.drawText('Product:', {
+  currentPage.drawText('Product:', {
     x: labelX,
     y: currentY,
     size: 10,
     font: boldFont,
     color: darkGray,
   });
-  page.drawText(projectData.product, {
+  currentPage.drawText(projectData.product, {
     x: valueX,
     y: currentY,
     size: 10,
@@ -686,30 +828,30 @@ async function addCoverPage(pdf: PDFDocument, projectData: ProjectData, selected
     color: darkGray,
   });
 
-  // Footer section
+  // Footer section - always on last page
   const footerY = 120;
-  page.drawText('NEXGEN® Building Products, LLC', {
+  currentPage.drawText('NEXGEN® Building Products, LLC', {
     x: labelX,
     y: footerY,
     size: 9,
     font: boldFont,
     color: darkGray,
   });
-  page.drawText('1504 Manhattan Ave West, #300 Brandon, FL 34205', {
+  currentPage.drawText('1504 Manhattan Ave West, #300 Brandon, FL 34205', {
     x: labelX,
     y: footerY - 12,
     size: 8,
     font: font,
     color: mediumGray,
   });
-  page.drawText('(727) 634-5534', {
+  currentPage.drawText('(727) 634-5534', {
     x: labelX,
     y: footerY - 24,
     size: 8,
     font: font,
     color: mediumGray,
   });
-  page.drawText('Technical Support: support@nexgenbp.com', {
+  currentPage.drawText('Technical Support: support@nexgenbp.com', {
     x: labelX,
     y: footerY - 36,
     size: 8,
@@ -720,7 +862,7 @@ async function addCoverPage(pdf: PDFDocument, projectData: ProjectData, selected
   // Version footer
   const versionText = 'Version 1.0 October 2025 © 2025 NEXGEN Building Products';
   const versionWidth = font.widthOfTextAtSize(versionText, 7);
-  page.drawText(versionText, {
+  currentPage.drawText(versionText, {
     x: width - versionWidth - 50,
     y: 50,
     size: 7,

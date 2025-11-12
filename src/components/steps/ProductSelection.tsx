@@ -33,23 +33,11 @@ export default function ProductSelection({
       id: 'structural-floor' as ProductType,
       name: 'Structural Floor Panel',
       description: 'MAXTERRA® MgO Non-Combustible Structural Floor Panels',
-      features: [
-        '3/4-in (20mm) thickness',
-        'ESR-5194 certified',
-        'ESL-1645 acoustic performance',
-        'Multiple fire assembly options',
-      ],
     },
     {
       id: 'underlayment' as ProductType,
       name: 'Underlayment Panel',
       description: 'MAXTERRA® MgO Fire- And Water-Resistant Underlayment Panels',
-      features: [
-        '1/2-in (12mm) or 5/8-in (16mm) thickness',
-        'ESR-5192 certified',
-        'Fire and water resistant',
-        'Multiple fire assembly options',
-      ],
     },
   ];
 
@@ -111,22 +99,9 @@ export default function ProductSelection({
                   )}>
                     {product.name}
                   </h3>
-                  <p className="text-sm text-secondary-700 dark:text-gray-400 mb-4">
+                  <p className="text-sm text-secondary-700 dark:text-gray-400">
                     {product.description}
                   </p>
-
-                  {/* Features */}
-                  <ul className="space-y-2">
-                    {product.features.map((feature, index) => (
-                      <li
-                        key={index}
-                        className="flex items-start text-sm text-secondary-800 dark:text-gray-300"
-                      >
-                        <span className="mr-2 text-primary-500">•</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               </motion.button>
             );
