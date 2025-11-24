@@ -108,33 +108,34 @@ export default {
 
           const finalPdf = await PDFDocument.create()
 
-          let submittalFormPageCount = 0
+          llet submittalFormPageCount = 0
 
-          try {
-            const templatePdf = await loadAndFillTemplate(projectData, selectedDocumentNames, allAvailableDocuments)
-            const submittalFormPages = await finalPdf.copyPages(templatePdf, templatePdf.getPageIndices())
-            submittalFormPages.forEach(page => finalPdf.addPage(page))
-            submittalFormPageCount = submittalFormPages.length
-            console.log(`Added ${submittalFormPages.length} pages from submittal form`)
-          } catch (templateError) {
-            console.error('Error loading template:', templateError)
-            await addErrorPage(finalPdf, 'Template Error', 'Failed to load template. Using blank document.')
-            submittalFormPageCount = 1
-          }
+try {
+  const templatePdf = await loadAndFillTemplate(projectData, selectedDocumentNames, allAvailableDocuments)
+  const submittalFormPages = await finalPdf.copyPages(templatePdf, templatePdf.getPageIndices())
+  submittalFormPages.forEach(page => finalPdf.addPage(page))
+  submittalFormPageCount = submittalFormPages.length
+  console.log(`Added ${submittalFormPages.length} pages from submittal form`)
+} catch (templateError) {
+  console.error('Error loading template:', templateError)
+  await addErrorPage(finalPdf, 'Template Error', 'Failed to load template. Using blank document.')
+  submittalFormPageCount = 1
+}
 
-          try {
-            await addProductInfoPage(finalPdf, projectData)
-          } catch (productInfoError) {
-            console.error('Error adding product info:', productInfoError)
-            await addErrorPage(finalPdf, 'Product Info', 'Failed to add product information.')
-          }
+try {
+  await addProductInfoPage(finalPdf, projectData)
+} catch (productInfoError) {
+  console.error('Error adding product info:', productInfoError)
+  await addErrorPage(finalPdf, 'Product Info', 'Failed to add product information.')
+}
 
-          const submittalAndProductInfoPageCount = finalPdf.getPageCount()
+const submittalAndProductInfoPageCount = finalPdf.getPageCount()
 
-          // Insert Table of Contents after submittal form and product info
-          const tocPageNumber = submittalAndProductInfoPageCount + 1
-          const tocPage = await createTableOfContents(finalPdf, [], tocPageNumber)
-          finalPdf.insertPage(submittalAndProductInfoPageCount, tocPage)
+// Insert Table of Contents after submittal form and product info
+const tocPageNumber = submittalAndProductInfoPageCount + 1
+const tocPage = await createTableOfContents(finalPdf, [], tocPageNumber)
+finalPdf.insertPage(submittalAndProductInfoPageCount, tocPage)
+
 
           const documentSections: DocumentSection[] = []
           let currentPageNumber = finalPdf.getPageCount() + 1
