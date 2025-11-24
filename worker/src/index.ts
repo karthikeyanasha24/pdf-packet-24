@@ -606,10 +606,11 @@ async function addCoverPage(pdf: PDFDocument, projectData: ProjectData, selected
   currentY -= (fieldHeight + fieldSpacing);
 
   drawFormField('Email Address', projectData.emailAddress, currentY);
-  currentY -= (fieldHeight + fieldSpacing);
+currentY -= (fieldHeight + fieldSpacing);
 
-  drawFormField('Phone Number', projectData.phoneNumber, currentY);
-  currentY -= (fieldHeight + fieldSpacing);
+drawFormField('Phone Number', projectData.phoneNumber, currentY);
+currentY -= (fieldHeight + fieldSpacing);
+
 
   drawFormField('Date', projectData.date, currentY);
   currentY -= (fieldHeight + 15);
