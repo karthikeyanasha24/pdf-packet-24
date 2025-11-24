@@ -1,6 +1,5 @@
 // src/services/pdfService.ts
 import type { ProjectFormData, SelectedDocument, Document, ProductType } from '@/types'
-import { documentService } from './documentService'
 
 export class PDFService {
   private workerUrl: string
@@ -28,7 +27,27 @@ export class PDFService {
       const documentsWithData = await Promise.all(
         sortedDocs.map(async (doc) => {
           try {
-            const fileData = await documentService.exportDocumentAsBase64(doc.document.id)
+            let fileData = ''
+
+            // Fetch file data from URL if available
+            if (doc.document.url) {
+              const response = await fetch(doc.document.url)
+              if (response.ok) {
+                const blob = await response.blob()
+                const reader = new FileReader()
+                fileData = await new Promise((resolve, reject) => {
+                  reader.onloadend = () => {
+                    const base64String = reader.result as string
+                    // Extract base64 data without the data:application/pdf;base64, prefix
+                    const base64Data = base64String.split(',')[1] || ''
+                    resolve(base64Data)
+                  }
+                  reader.onerror = reject
+                  reader.readAsDataURL(blob)
+                })
+              }
+            }
+
             return {
               id: doc.id,
               name: doc.document.name || 'Unnamed Document',
@@ -45,7 +64,10 @@ export class PDFService {
 
       const selectedDocumentNames = sortedDocs.map(doc => doc.document.name || 'Unnamed Document')
       const productType = formData.productType as ProductType || 'structural-floor'
-      const allCategoryDocs = await documentService.getDocumentsByProductType(productType)
+
+      // Get all documents of this type for the submittal form
+      const response = await fetch(`/api/documents?productType=${productType}`)
+      const allCategoryDocs = response.ok ? await response.json() : []
 
       // Prepare request payload with all required fields and defaults
       const payload = {
@@ -96,7 +118,7 @@ export class PDFService {
         // Process documents
         documents: documentsWithData,
         selectedDocumentNames,
-        allAvailableDocuments: allCategoryDocs.map(doc => doc.name).filter(Boolean)
+        allAvailableDocuments: allCategoryDocs.map((doc: any) => doc.name).filter(Boolean)
       };
 
       console.log('Sending request to worker with payload:', {
@@ -107,7 +129,7 @@ export class PDFService {
         }))
       });
 
-      const response = await fetch(`${this.workerUrl}/generate-packet`, {
+      const workerResponse = await fetch(`${this.workerUrl}/generate-packet`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,19 +137,19 @@ export class PDFService {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        let errorMessage = `Worker request failed: ${response.status} ${response.statusText}`;
+      if (!workerResponse.ok) {
+        let errorMessage = `Worker request failed: ${workerResponse.status} ${workerResponse.statusText}`;
         try {
-          const errorData = await response.json();
+          const errorData = await workerResponse.json();
           errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
         } catch (e) {
-          const text = await response.text();
+          const text = await workerResponse.text();
           errorMessage += ` - ${text}`;
         }
         throw new Error(errorMessage);
       }
 
-      const pdfBuffer = await response.arrayBuffer();
+      const pdfBuffer = await workerResponse.arrayBuffer();
       if (pdfBuffer.byteLength === 0) {
         throw new Error('Received empty PDF from worker');
       }
